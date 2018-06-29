@@ -1,0 +1,54 @@
+proxy:
+  secretToken:
+  # https:
+  #   hosts:
+  #     - <your-domain-name>
+  #   letsencrypt:
+  #     contactEmail: <your-email-address>
+
+hub:
+  extraEnv:
+    JUPYTER_ENABLE_LAB: 1
+  auth:
+    admin:
+      users:
+        - antoine.legrain_gmail.com
+    whitelist:
+      users:
+        - antoine.legrain_gmail.com
+  extraConfig: |
+    c.KubeSpawner.cmd = ['jupyter-labhub']
+    # Authenticate users with OAuth0 OAuth
+    from oauthenticator.auth0 import Auth0OAuthenticator
+    class NormalizedUsernameAuth0OAuthenticator(Auth0OAuthenticator):
+        def normalize_username(self, username):
+            return username.lower().replace('@', '_')
+    c.JupyterHub.authenticator_class = NormalizedUsernameAuth0OAuthenticator
+    c.Auth0OAuthenticator.scope = ['openid', 'email']
+  extraEnv:
+    AUTH0_SUBDOMAIN: auth-domain
+    # OAUTH_CLIENT_ID: use secrets
+    # OAUTH_CLIENT_SECRET: use secrets
+    OAUTH_CALLBACK_URL: https://mydomain/hub/oauth_callback
+
+singleuser:
+  image:
+    name: jupyter/scipy-notebook
+    tag: c7fb6660d096
+  schedulerStrategy: pack
+  prePuller:
+    continuous:
+      enabled: true
+  defaultUrl: "/lab"
+  lifecycleHooks:
+    postStart:
+      exec:
+        command: ["gitpuller", "https://github.com/data-8/materials-fa17", "master", "materials-fa"]
+  memory:
+    limit: 1G
+    guarantee: 1G
+  cpu:
+    limit: .5
+    guarantee: .5
+  storage:
+    capacity: 2Gi
